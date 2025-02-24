@@ -59,7 +59,10 @@ func main() {
 
 	logger.Println("Received shutdown signal, starting graceful shutdown...")
 
-	// Graceful shutdown
+	// Сначала завершаем работу сервера чата
+	srv.Shutdown()
+
+	// Затем завершаем работу HTTP сервера
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 

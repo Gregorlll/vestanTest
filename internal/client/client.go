@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"log"
 	"os"
 
 	models "vestantest/internal/models"
@@ -14,25 +15,31 @@ import (
 type Client struct {
 	conn     *websocket.Conn
 	username string
+	logger   *log.Logger
 }
 
 func NewClient() *Client {
-	return &Client{}
+	return &Client{
+		logger: log.New(os.Stdout, "[CLIENT] ", log.LstdFlags),
+	}
 }
 
 func (c *Client) Connect(serverURL, username string) error {
+	c.logger.Printf("Attempting to connect to %s as %s", serverURL, username)
 	url := fmt.Sprintf("%s/ws?username=%s", serverURL, username)
 	conn, resp, err := websocket.DefaultDialer.Dial(url, nil)
 
 	if err != nil {
 		if resp != nil {
-			// Читаем сообщение об ошибке от сервера
 			body, _ := io.ReadAll(resp.Body)
+			c.logger.Printf("Connection failed: %s", string(body))
 			return fmt.Errorf("%s", string(body))
 		}
+		c.logger.Printf("Connection error: %v", err)
 		return err
 	}
 
+	c.logger.Println("Successfully connected to server")
 	c.conn = conn
 	c.username = username
 	return nil

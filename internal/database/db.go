@@ -2,6 +2,8 @@ package database
 
 import (
 	"database/sql"
+	"log"
+	"os"
 
 	models "vestantest/internal/models"
 
@@ -9,25 +11,37 @@ import (
 )
 
 type DB struct {
-	db *sql.DB
+	db     *sql.DB
+	logger *log.Logger
 }
 
 func NewDB(connStr string) (*DB, error) {
+	logger := log.New(os.Stdout, "[DB] ", log.LstdFlags)
+	logger.Printf("Connecting to database...")
+
 	db, err := sql.Open("postgres", connStr)
 	if err != nil {
+		logger.Printf("Database connection failed: %v", err)
 		return nil, err
 	}
 
 	if err = db.Ping(); err != nil {
+		logger.Printf("Database ping failed: %v", err)
 		return nil, err
 	}
+
+	logger.Println("Successfully connected to database")
 
 	// Create tables if they don't exist
 	if err = createTables(db); err != nil {
+		logger.Printf("Failed to create tables: %v", err)
 		return nil, err
 	}
 
-	return &DB{db: db}, nil
+	return &DB{
+		db:     db,
+		logger: logger,
+	}, nil
 }
 
 func createTables(db *sql.DB) error {
@@ -55,14 +69,22 @@ func createTables(db *sql.DB) error {
 }
 
 func (db *DB) SaveMessage(username, message string) error {
+	db.logger.Printf("Saving message from %s", username)
 	query := `INSERT INTO messages (username, message) VALUES ($1, $2)`
 	_, err := db.db.Exec(query, username, message)
+	if err != nil {
+		db.logger.Printf("Error saving message: %v", err)
+	}
 	return err
 }
 
 func (db *DB) LogConnection(username, eventType string) error {
+	db.logger.Printf("Logging connection event: %s - %s", username, eventType)
 	query := `INSERT INTO connection_logs (username, event_type) VALUES ($1, $2)`
 	_, err := db.db.Exec(query, username, eventType)
+	if err != nil {
+		db.logger.Printf("Error logging connection: %v", err)
+	}
 	return err
 }
 
